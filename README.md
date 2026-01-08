@@ -1,98 +1,139 @@
-# Sistema de Gestión del Centro Deportivo Universitario
+# Centro de Eventos Universitarios
 
-## 🎯 Objetivo General
+Sistema para la gestión integral de eventos deportivos, personas, reservas e identidad de usuarios dentro de un centro universitario. El proyecto adopta principios de arquitectura limpia, desacoplamiento por interfaces y persistencia mediante Entity Framework Core con base de datos SQLite. La interfaz de usuario se implementa con Blazor (Razor Components) y MudBlazor.
 
-Desarrollar un sistema completo para la **gestión de eventos deportivos e inscripciones (reservas)** en un centro universitario. Este sistema permite registrar personas, definir eventos deportivos y gestionar reservas, controlando el estado de asistencia de los participantes. Incluye además la **gestión de usuarios** con permisos específicos y un flujo de autenticación seguro.
+## Objetivos
 
----
+- Administrar el ciclo de vida de eventos deportivos: alta, modificación, listado y eliminación bajo reglas de negocio.
+- Gestionar personas: alta, modificación, listado y eliminación con validaciones de unicidad.
+- Registrar y administrar reservas asociadas a eventos, controlando cupos y estados de asistencia.
+- Gestionar usuarios con un modelo de permisos y autorizaciones.
+- Proveer una interfaz accesible y coherente para las operaciones del sistema.
 
-## 🧱 Arquitectura y Estructura del Proyecto
+## Tecnologías y composición
 
-La solución se organiza bajo el nombre `CentroEventos` y sigue los principios de **Arquitectura Limpia**, promoviendo la separación de responsabilidades y el desacoplamiento mediante inyección de dependencias.
+- .NET 8 (C#)
+- Blazor (Razor Components) con MudBlazor
+- Entity Framework Core
+- SQLite (archivo local)
+- Inyección de dependencias (DI) nativa de ASP.NET
 
-### Estructura de Proyectos
+Composición del repositorio:
+- HTML: 76.9 %
+- C#: 23.1 %
 
-- **CentroEventos.Aplicacion** (Librería de clases .NET 8)
-  - Núcleo de la lógica de negocio.
-  - Sin dependencias externas de la solución.
-  - Incluye entidades (`Persona`, `EventoDeportivo`, `Reserva`, `Usuario`), validadores, repositorios (interfaces), casos de uso y excepciones personalizadas.
+## Estructura del repositorio
 
-- **CentroEventos.Repositorios** (Librería de clases .NET 8)
-  - Implementa la persistencia con **Entity Framework Core** y base de datos **SQLite** (modelo code first).
-  - Contiene los repositorios concretos y la implementación de `ServicioAutorizacion`.
-  - Referencia a `CentroEventos.Aplicacion`.
+- CentroEventos.sln: solución principal para abrir todo el proyecto.
+- CentroEventos.Aplicacion: librería con el núcleo de negocio.
+  - Entities: `Persona`, `EventoDeportivo`, `Reserva`, `Usuario`.
+  - Enum: enumeraciones de dominio (incluye `Permiso` y estados).
+  - Exceptions: excepciones de negocio y autorización.
+  - Interfaces: contratos de repositorios y servicios.
+  - Service: servicios de autorización y utilitarios de aplicación.
+  - UseCases: casos de uso por agregado (Personas, Eventos, Reservas, Usuarios) y utilitarios de autorización.
+  - Validators: validadores de entidades y listas.
+- CentroEventos.Repositorios: persistencia con EF Core y SQLite.
+  - Data: contexto de base de datos y utilitarios de inicialización.
+  - Repos: implementaciones concretas de repositorios según interfaces del núcleo.
+- CentroEventos.UI: aplicación Blazor (servidor).
+  - Components: componentes y páginas de la interfaz.
+  - Program.cs: configuración del host, servicios, DI, EF Core, MudBlazor, mapeo de componentes.
+  - appsettings.json y appsettings.Development.json: configuración de entorno.
 
-- **CentroEventos.UI** (Aplicación Blazor .NET 8)
-  - Interfaz de usuario moderna y accesible.
-  - Permite gestión de usuarios, eventos, reservas y personas.
-  - Referencia a ambos proyectos anteriores.
+## Diseño y aptitudes del sistema
 
----
+- Arquitectura limpia y separada por capas:
+  - Dominio y aplicación libres de dependencias de infraestructura.
+  - Persistencia y UI referencian únicamente contratos del núcleo.
+- Desacoplamiento por interfaces:
+  - Los repositorios (`IRepositorioPersona`, `IRepositorioEventoDeportivo`, `IRepositorioReserva`, `IRepositorioUsuario`) permiten reemplazar la infraestructura sin afectar la lógica.
+- Casos de uso explícitos:
+  - Orquestan reglas de negocio y validaciones, con autorización previa a las operaciones sensibles.
+  - Ejemplos: `AgregarPersonaUseCase`, `ListarEventosConCupoDisponibleUseCase`, `EliminarEventoDeportivoUseCase`, `ReservaAltaUseCase`.
+- Modelo de autorización:
+  - `UseCaseConAutorizacion` centraliza la verificación de permisos (`Permiso`) mediante `IServicioAutorizacion`.
+  - Evita acceso no autorizado a operaciones de alta, baja y modificación.
+- Validaciones de negocio:
+  - Validadores específicos por entidad (por ejemplo, `ValidadorPersona`, `ValidadorEventoDeportivo`, `ValidadorReserva`) y utilitarios para listas no vacías.
+- Persistencia portable:
+  - SQLite local, con inicialización del archivo en `Data/CentroEventos.sqlite` dentro del directorio base de la aplicación.
+  - EF Core para consultas, conteos y consistencia de transacciones.
+- Interfaz modular:
+  - Blazor con MudBlazor para notificaciones, estilos y componentes interactivos.
+  - Registro de componentes y servicios en `Program.cs`.
 
-## 📦 Organización del Repositorio
+## Reglas de negocio principales
 
-El repositorio se estructura para reflejar la arquitectura limpia y la división modular. Los proyectos suelen estar organizados en carpetas separadas, cada uno con su propia lógica y responsabilidades.
+- Un evento no puede exceder su cupo máximo de reservas.
+- Una persona no puede reservar dos veces el mismo evento.
+- No se pueden modificar eventos pasados.
+- Las fechas de inicio no pueden ser anteriores al presente.
+- No se puede eliminar un evento con reservas asociadas.
+- No se puede eliminar una persona que sea responsable de eventos o tenga reservas asociadas.
+- El primer usuario registrado es Administrador (todos los permisos).
+- Los usuarios nuevos solo tienen permisos de lectura.
 
----
+## Configuración y ejecución
 
-## 📌 Entidades Principales
+Requisitos:
+- .NET SDK 8 instalado.
 
-- **Persona:** Id, DNI, Nombre, Apellido, Email, Teléfono.
-- **EventoDeportivo:** Id, Nombre, Descripción, Fecha/Hora de inicio, Duración, Cupo máximo, Responsable.
-- **Reserva:** Id, Persona, Evento, Fecha de alta, Estado de asistencia.
-- **Usuario:** Id, Nombre, Apellido, Email, Hash de contraseña, Permisos.
+Pasos sugeridos:
 
----
+1. Clonar el repositorio:
+   ```
+   git clone https://github.com/simonet9/Centro-Universitario.git
+   ```
+2. Compilar la solución:
+   ```
+   dotnet build CentroEventos.sln
+   ```
+3. Ejecutar la UI (Blazor):
+   ```
+   dotnet run --project CentroEventos.UI
+   ```
+   - En el arranque, se crea el directorio `Data` y el archivo `CentroEventos.sqlite` si no existe.
+   - Se inicializa el contexto y se aplican las configuraciones de MudBlazor y componentes.
 
-## 📜 Reglas de Negocio
+Configuración:
+- `Program.cs` configura el contexto EF Core:
+  - `UseSqlite($"Data Source={dbPath}")` con `dbPath = <BaseDirectory>/Data/CentroEventos.sqlite`.
+- Archivos `appsettings.json` y `appsettings.Development.json` están disponibles para ajustes de entorno.
 
-1. Un evento no puede exceder su cupo máximo de reservas.
-2. Una persona no puede reservar dos veces el mismo evento.
-3. No se pueden modificar eventos pasados.
-4. Las fechas de inicio no pueden ser anteriores al presente.
-5. No se puede eliminar un evento con reservas asociadas.
-6. No se puede eliminar una persona responsable de eventos o con reservas.
-7. El primer usuario registrado es Administrador (todos los permisos).
-8. Los usuarios nuevos solo tienen permisos de lectura.
+## Módulos funcionales
 
----
+- Personas:
+  - Alta con validación de DNI y email únicos.
+  - Listado con validación de no vacío.
+  - Eliminación condicionada a la ausencia de reservas y de rol de responsable en eventos.
+- Eventos deportivos:
+  - Alta, modificación y listado.
+  - Eliminación condicionada a la inexistencia de reservas asociadas.
+  - Listado de eventos con cupo disponible y fecha válida.
+- Reservas:
+  - Alta con validaciones de duplicidad por persona y estado inicial.
+  - Modificación y eliminación bajo permisos correspondientes.
+- Usuarios:
+  - Alta, modificación, listado y eliminación.
+  - Autorización basada en `Permiso` aplicada en casos de uso sensibles.
 
-## ✅ Validaciones
+## Calidad y mantenibilidad
 
-Cada entidad tiene validadores específicos en `CentroEventos.Aplicacion`, asegurando unicidad y obligatoriedad de campos clave, así como la integridad de referencias y restricciones de negocio.
+- Separación de responsabilidades y dependencia invertida.
+- Casos de uso y validadores facilitan auditoría de reglas y su evolución.
+- Repositorios encapsulan acceso a datos y permiten cambiar de proveedor de base sin modificar el núcleo.
+- Inicialización controlada de la base de datos reduce fricción en despliegues locales.
+- Uso de MudBlazor mejora la experiencia de usuario y estandariza la presentación.
 
----
+## Estructura de permisos
 
-## ⚙️ Casos de Uso
+El sistema emplea una enumeración de permisos (`Permiso`) para autorizar operaciones. Ejemplos empleados en los casos de uso:
+- `EventoAlta`, `EventoModificacion`, `EventoBaja`.
+- `ReservaModificacion`.
+- Otros permisos pueden existir y ser verificados según el caso de uso.
 
-Incluye CRUD completos para todas las entidades y casos específicos como:
+## Notas sobre datos y persistencia
 
-- Alta de reservas con verificación de cupo y duplicidad.
-- Listado de eventos con cupo disponible.
-- Listado de asistentes a eventos pasados.
-
----
-
-## 🔐 Autenticación y Permisos
-
-- Enum `Permiso` define los permisos disponibles para usuarios sobre las distintas entidades.
-- Servicio de autorización centraliza la verificación de permisos.
-- El flujo de autenticación asegura el hash seguro de contraseñas y la asignación de roles adecuada.
-
----
-
-## 🖥 Interfaz de Usuario (MudBlazor)
-
-- Registro e inicio de sesión.
-- Gestión visual de eventos, personas, reservas y usuarios (solo para autorizados).
-- Visualización intuitiva de cupos y estado de asistencia.
-
----
-
-## 🧪 Seguridad
-
-- Contraseñas almacenadas únicamente como hash seguro.
-- Sin almacenamiento de contraseñas originales ni recuperación automática.
-- Validación estricta de autenticidad mediante comparación de hashes.
-
----
+- El conteo de reservas por evento se utiliza para validar cupos y bloqueos de eliminación.
+- Las fechas futuras son condición para que un evento se considere disponible en listados de disponibilidad.

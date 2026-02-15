@@ -20,10 +20,6 @@ Sistema para la gestión integral de eventos deportivos, personas, reservas e id
 - **Testing**: xUnit, Moq, FluentAssertions
 - **Seguridad**: PBKDF2 (Hashing), Claims-based Authorization
 
-Composición del repositorio:
-- HTML: 76.9 %
-- C#: 23.1 %
-
 ## Estructura del repositorio
 
 - CentroEventos.sln: solución principal para abrir todo el proyecto.

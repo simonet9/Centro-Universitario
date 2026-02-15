@@ -1,6 +1,6 @@
 # Centro de Eventos Universitarios
 
-Sistema para la gestión integral de eventos deportivos, personas, reservas e identidad de usuarios dentro de un centro universitario. El proyecto adopta principios de arquitectura limpia, desacoplamiento por interfaces y persistencia mediante Entity Framework Core con base de datos SQLite. La interfaz de usuario se implementa con Blazor (Razor Components) y MudBlazor.
+Sistema para la gestión integral de eventos deportivos, personas, reservas e identidad de usuarios dentro de un centro universitario. El proyecto adopta principios de arquitectura limpia, desacoplamiento por interfaces y persistencia mediante Entity Framework Core con base de datos SQLite. La interfaz de usuario se implementa con Blazor (Razor Components) y MudBlazor, siguiendo patrones asíncronos y de seguridad robusta.
 
 ## Objetivos
 
@@ -17,6 +17,8 @@ Sistema para la gestión integral de eventos deportivos, personas, reservas e id
 - Entity Framework Core
 - SQLite (archivo local)
 - Inyección de dependencias (DI) nativa de ASP.NET
+- **Testing**: xUnit, Moq, FluentAssertions
+- **Seguridad**: PBKDF2 (Hashing), Claims-based Authorization
 
 Composición del repositorio:
 - HTML: 76.9 %
@@ -40,6 +42,8 @@ Composición del repositorio:
   - Components: componentes y páginas de la interfaz.
   - Program.cs: configuración del host, servicios, DI, EF Core, MudBlazor, mapeo de componentes.
   - appsettings.json y appsettings.Development.json: configuración de entorno.
+- CentroEventos.Tests: proyecto de pruebas unitarias.
+  - Tests de Casos de Uso (Eventos, Reservas) con mocking de repositorios.
 
 ## Diseño y aptitudes del sistema
 
@@ -51,9 +55,12 @@ Composición del repositorio:
 - Casos de uso explícitos:
   - Orquestan reglas de negocio y validaciones, con autorización previa a las operaciones sensibles.
   - Ejemplos: `AgregarPersonaUseCase`, `ListarEventosConCupoDisponibleUseCase`, `EliminarEventoDeportivoUseCase`, `ReservaAltaUseCase`.
-- Modelo de autorización:
+- Modelo de autorización y Seguridad:
   - `UseCaseConAutorizacion` centraliza la verificación de permisos (`Permiso`) mediante `IServicioAutorizacion`.
-  - Evita acceso no autorizado a operaciones de alta, baja y modificación.
+  - Implementación de `AuthenticationStateProvider` personalizado para gestión de sesión segura.
+  - Hashing de contraseñas con **PBKDF2** y salts dinámicos.
+- Arquitectura Asíncrona:
+  - Uso extensivo de `async/await` en todas las capas (UI, Aplicación, Repositorios) para maximizar la escalabilidad y evitar bloqueos.
 - Validaciones de negocio:
   - Validadores específicos por entidad (por ejemplo, `ValidadorPersona`, `ValidadorEventoDeportivo`, `ValidadorReserva`) y utilitarios para listas no vacías.
 - Persistencia portable:
@@ -61,6 +68,7 @@ Composición del repositorio:
   - EF Core para consultas, conteos y consistencia de transacciones.
 - Interfaz modular:
   - Blazor con MudBlazor para notificaciones, estilos y componentes interactivos.
+  - Uso de `<AuthorizeView>` y `CascadingAuthenticationState` para control de acceso en UI.
   - Registro de componentes y servicios en `Program.cs`.
 
 ## Reglas de negocio principales
@@ -89,7 +97,11 @@ Pasos sugeridos:
    ```
    dotnet build CentroEventos.sln
    ```
-3. Ejecutar la UI (Blazor):
+3. Ejecutar pruebas unitarias:
+   ```
+   dotnet test
+   ```
+4. Ejecutar la UI (Blazor):
    ```
    dotnet run --project CentroEventos.UI
    ```

@@ -2,11 +2,12 @@
 @using CentroEventos.Aplicacion.UseCases.Personas
 @using CentroEventos.Aplicacion.Entities
 
-@using CentroEventos.Aplicacion.Service
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject CentroEventos.Aplicacion.Service
 @inject AgregarPersonaUseCase RegistrarPersonaUseCase
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
-@inject UsuarioLogueado UsuarioLogueado
 <div class="container-fluid py-4">
     <MudContainer MaxWidth="MaxWidth.Medium">
         <MudPaper Elevation="1" Class="pa-8 rounded-lg">
@@ -42,7 +43,7 @@
                 datos.Email,
                 datos.telefono
             );
-            await Task.Run(() => RegistrarPersonaUseCase.Ejecutar(persona));
+            await RegistrarPersonaUseCase.EjecutarAsync(persona);
             Snackbar.Add("Persona creada con éxito", Severity.Success);
             Volver();
         }
@@ -64,8 +65,5 @@
 
     protected override void OnInitialized()
     {
-        var usuarioLogueado = UsuarioLogueado.UsuarioActual;
-        if (usuarioLogueado != null) return;
-        NavigationManager.NavigateTo("/login", true);
     }
 }

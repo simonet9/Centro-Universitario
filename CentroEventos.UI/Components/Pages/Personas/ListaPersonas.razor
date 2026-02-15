@@ -1,10 +1,12 @@
 ﻿@page "/personas/listar"
 @using CentroEventos.Aplicacion.Entities
 @using CentroEventos.Aplicacion.Service
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
 @inject CentroEventos.Aplicacion.UseCases.Personas.ListarPersonasUseCase ListarPersonasUseCase
 @inject NavigationManager Navigation
 @inject CentroEventos.Aplicacion.UseCases.Personas.EliminarPersonaUseCase EliminarPersonaUseCase
-@inject UsuarioLogueado UsuarioLogueado
+@inject AuthenticationStateProvider AuthStateProvider
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 
@@ -88,16 +90,9 @@
 @code {
     private List<Persona> _personas = new();
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        var usuarioLogueado = UsuarioLogueado.UsuarioActual;
-        if (usuarioLogueado == null)
-        {
-            Navigation.NavigateTo("/login", true);
-            return;
-        }
-
-        CargarPersonas();
+        await CargarPersonasAsync();
     }
 
     private void ModificarPersona(Persona persona)
@@ -118,9 +113,9 @@
             try
             {
                 // Si EliminarPersonaUseCase.Ejecutar es asíncrono, usa await
-                EliminarPersonaUseCase.Ejecutar(persona.Id);
+                await EliminarPersonaUseCase.EjecutarAsync(persona.Id);
                 Snackbar.Add("Persona eliminada con éxito", Severity.Success);
-                CargarPersonas();
+                await CargarPersonasAsync();
             }
             catch (Exception ex)
             {
@@ -134,19 +129,18 @@
         Navigation.NavigateTo("/personas/agregar");
     }
 
-    private void CargarPersonas()
+    private async Task CargarPersonasAsync()
     {
         try
         {
-            _personas = ListarPersonasUseCase.Ejecutar();
+            _personas = await ListarPersonasUseCase.EjecutarAsync();
         }
         catch (Exception ex)
         {
             _personas = new List<Persona>();
-            Snackbar.Add($"Error al cargar las personas: {ex.Message}", Severity.Error);
+            if (!ex.Message.Contains("No hay personas"))
+                Snackbar.Add($"Error al cargar las personas: {ex.Message}", Severity.Error);
         }
-
-        StateHasChanged();
     }
 
 }

@@ -8,22 +8,27 @@ namespace CentroEventos.Aplicacion.UseCases.Evento
         IRepositorioEventoDeportivo repoEvento,
         IRepositorioReserva repoReserva)
     {
-        public List<EventoDeportivo> Ejecutar()
+        public async Task<List<EventoDeportivo>> EjecutarAsync()
         {
-            var todosLosEventos = repoEvento.Listar();
-            var eventosDisponibles = FiltrarEventosDisponibles(todosLosEventos);
+            var todosLosEventos = await repoEvento.ListarAsync();
+            var eventosDisponibles = new List<EventoDeportivo>();
+
+            foreach(var evento in todosLosEventos)
+            {
+                 if(await EsEventoDisponibleAsync(evento))
+                 {
+                     eventosDisponibles.Add(evento);
+                 }
+            }
             
             return ValidadorListas.ValidarNoVacia(
                 eventosDisponibles, 
                 "No hay eventos disponibles con cupo.");
         }
 
-        private List<EventoDeportivo> FiltrarEventosDisponibles(List<EventoDeportivo> eventos)
+        private async Task<bool> EsEventoDisponibleAsync(EventoDeportivo evento)
         {
-            return eventos
-                .Where(TieneFechaValida)
-                .Where(TieneCupoDisponible)
-                .ToList();
+            return TieneFechaValida(evento) && await TieneCupoDisponibleAsync(evento);
         }
 
         private static bool TieneFechaValida(EventoDeportivo evento)
@@ -31,9 +36,9 @@ namespace CentroEventos.Aplicacion.UseCases.Evento
             return evento.FechaHoraInicio > DateTime.Now;
         }
 
-        private bool TieneCupoDisponible(EventoDeportivo evento)
+        private async Task<bool> TieneCupoDisponibleAsync(EventoDeportivo evento)
         {
-            var reservasActuales = repoReserva.ContarPorEvento(evento.Id);
+            var reservasActuales = await repoReserva.ContarPorEventoAsync(evento.Id);
             return reservasActuales < evento.CupoMaximo;
         }
 

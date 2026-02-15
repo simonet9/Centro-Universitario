@@ -1,15 +1,15 @@
 ﻿using CentroEventos.Aplicacion.Entities;
+
 namespace CentroEventos.Aplicacion.Interfaces;
 
 public interface IRepositorioUsuario
 {
-    Usuario? ObtenerPorEmail(string email);
-    Usuario? ObtenerPorId(Guid id);
-    void Agregar(Usuario usuario);
-    void Actualizar(Usuario usuario);
-    List<Usuario> ObtenerTodos();
-    bool ExisteAlguno();
-    void GuardarCambios();
-    void Eliminar(Usuario usuario);
-
+    Task<Usuario?> ObtenerPorEmailAsync(string email);
+    Task<Usuario?> ObtenerPorIdAsync(Guid id);
+    Task AgregarAsync(Usuario usuario);
+    Task ActualizarAsync(Usuario usuario);
+    Task<List<Usuario>> ObtenerTodosAsync();
+    Task<bool> ExisteAlgunoAsync();
+    Task GuardarCambiosAsync();
+    Task EliminarAsync(Usuario usuario);
 }

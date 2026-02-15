@@ -9,12 +9,12 @@ namespace CentroEventos.Aplicacion.UseCases.Reservas
         IServicioAutorizacion servicioAutorizacion
     ) : UseCaseConAutorizacion(servicioAutorizacion)
     {
-        public void Ejecutar(Guid idReserva, Guid idUsuario)
+        public async Task EjecutarAsync(Guid idReserva, Guid idUsuario)
         {
-            ValidarAutorizacion(idUsuario, Permiso.ReservaBaja);
-            var reserva = repoReserva.BuscarPorId(idReserva) ?? throw new EntidadNotFoundException("Reserva no encontrada.");
-            repoReserva.Eliminar(reserva);
-            repoReserva.GuardarCambios();
+            await ValidarAutorizacionAsync(idUsuario, Permiso.ReservaBaja);
+            var reserva = await repoReserva.BuscarPorIdAsync(idReserva) ?? throw new EntidadNotFoundException("Reserva no encontrada.");
+            await repoReserva.EliminarAsync(reserva);
+            await repoReserva.GuardarCambiosAsync();
         }
     }
 }

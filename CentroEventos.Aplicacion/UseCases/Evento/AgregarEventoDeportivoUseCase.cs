@@ -9,15 +9,16 @@ namespace CentroEventos.Aplicacion.UseCases.Evento
     public class AgregarEventoDeportivoUseCase(IRepositorioEventoDeportivo repo, IServicioAutorizacion aut)
     : UseCaseConAutorizacion(aut)
     {
-        public void Ejecutar(EventoDeportivo eventoDeportivo, Guid usuarioId)
+        public async Task EjecutarAsync(EventoDeportivo eventoDeportivo, Guid usuarioId)
         {
-            ValidarAutorizacion(usuarioId, Permiso.EventoAlta);
+            await ValidarAutorizacionAsync(usuarioId, Permiso.EventoAlta);
             ValidadorEventoDeportivo.Validar(eventoDeportivo);
-            if(repo.BuscarPorId(eventoDeportivo.Id) != null)
+            
+            if(await repo.BuscarPorIdAsync(eventoDeportivo.Id) != null)
                 throw new OperacionInvalidaException("Ya existe un evento deportivo con el mismo ID.");
 
-            repo.Agregar(eventoDeportivo);
-            repo.GuardarCambios();
+            await repo.AgregarAsync(eventoDeportivo);
+            await repo.GuardarCambiosAsync();
         }
     }
 }

@@ -5,13 +5,15 @@
 @using CentroEventos.Aplicacion.Exceptions
 @using CentroEventos.Aplicacion.Interfaces
 @using CentroEventos.Aplicacion.Enum
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject AuthenticationStateProvider AuthStateProvider
 @inject ModificarReservaUseCase ModificarReservaUseCase
 @inject IRepositorioReserva RepositorioReserva
 @inject IRepositorioPersona RepositorioPersona
 @inject IRepositorioEventoDeportivo RepositorioEvento
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
-@inject UsuarioLogueado UsuarioLogueado
 
 <PageTitle>Editar Reserva</PageTitle>
 
@@ -83,19 +85,16 @@
     private string _dniResponsable = string.Empty;
     private Reserva _reserva = null!;
     
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        var usuarioLogueado = UsuarioLogueado.UsuarioActual;
-        if (usuarioLogueado == null)
-        {
-            Navigation.NavigateTo("/login", true);
-            return;
-        }
         try
         {
-            _reserva = RepositorioReserva.BuscarPorId(Id)!;
-            var persona = RepositorioPersona.BuscarPorId(_reserva.PersonaId);
-            var evento = RepositorioEvento.BuscarPorId(_reserva.EventoDeportivoId);
+            _reserva = await RepositorioReserva.BuscarPorIdAsync(Id)!;
+            if (_reserva == null) throw new EntidadNotFoundException("Reserva no encontrada");
+            
+            var persona = await RepositorioPersona.BuscarPorIdAsync(_reserva.PersonaId);
+            var evento = await RepositorioEvento.BuscarPorIdAsync(_reserva.EventoDeportivoId);
+            
             _nombreEvento = evento?.Nombre ?? "";
             _fechaAltaReserva = _reserva.FechaAltaReserva;
             _estadoAsistencia = _reserva.EstadoAsistencia;
@@ -118,18 +117,19 @@
         }
         try
         {
-            var persona = RepositorioPersona.ObtenerPorDocumento(_dniResponsable) ?? throw new EntidadNotFoundException("No se encontró la persona responsable.");
-            var evento = RepositorioEvento.BuscarPorNombre(_nombreEvento) ?? throw new EntidadNotFoundException("No se encontró el evento.");
+            var persona = await RepositorioPersona.ObtenerPorDocumentoAsync(_dniResponsable) ?? throw new EntidadNotFoundException("No se encontró la persona responsable.");
+            var evento = await RepositorioEvento.BuscarPorNombreAsync(_nombreEvento) ?? throw new EntidadNotFoundException("No se encontró el evento.");
 
             _reserva.EstadoAsistencia = _estadoAsistencia;
             _reserva.EventoDeportivoId = evento.Id;
             _reserva.FechaAltaReserva = _fechaAltaReserva;
             _reserva.PersonaId = persona.Id;
             
-            await Task.Run(() =>
-            {
-                if (UsuarioLogueado.UsuarioActual != null) ModificarReservaUseCase.Ejecutar(_reserva, UsuarioLogueado.UsuarioActual.Id);
-            });
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            var userId = Guid.Parse(user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? Guid.Empty.ToString());
+
+            await ModificarReservaUseCase.EjecutarAsync(_reserva, userId);
             Snackbar.Add("Reserva modificada correctamente", Severity.Success);
             Navigation.NavigateTo("/reservas/listar");
         }

@@ -5,10 +5,12 @@
 @using CentroEventos.Aplicacion.Exceptions
 @using CentroEventos.Aplicacion.Interfaces
 @using CentroEventos.Aplicacion.UseCases.Reservas
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject AuthenticationStateProvider AuthStateProvider
 @inject ReservaAltaUseCase RegistrarReservaUseCase
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
-@inject UsuarioLogueado User
 @inject IRepositorioPersona RepositorioPersona
 @inject IRepositorioEventoDeportivo RepositorioEventoDeportivo
 
@@ -35,22 +37,18 @@
 </div>
 
 @code {
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        if (User.UsuarioActual == null)
-        {
-            NavigationManager.NavigateTo("/login", true);
-        }
     }
 
     private async Task CrearReserva((string nombreEvento, DateTime fechaAltaReserva, Estado estadoAsistencia, string responsableDni) datos)
     {
         try
         {
-            var persona = RepositorioPersona.ObtenerPorDocumento(datos.responsableDni)
+            var persona = await RepositorioPersona.ObtenerPorDocumentoAsync(datos.responsableDni)
                           ?? throw new EntidadNotFoundException("No se encontró la persona con el DNI indicado.");
-            var evento = RepositorioEventoDeportivo.BuscarPorNombre(datos.nombreEvento)
-                         ?? throw new EntidadNotFoundException("No se encontró el evento deportivo indicado.");
+            var evento = await RepositorioEventoDeportivo.BuscarPorNombreAsync(datos.nombreEvento)
+                          ?? throw new EntidadNotFoundException("No se encontró el evento deportivo indicado.");
 
             var reserva = new Reserva(
                 persona.Id,
@@ -59,12 +57,14 @@
                 datos.estadoAsistencia
             );
 
-            if (User.UsuarioActual != null)
-            {
-                await Task.Run(() => RegistrarReservaUseCase.Ejecutar(reserva, User.UsuarioActual.Id));
-                Snackbar.Add("Reserva creada con éxito", Severity.Success);
-                Volver();
-            }
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            var userId = Guid.Parse(user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? Guid.Empty.ToString());
+
+            await RegistrarReservaUseCase.EjecutarAsync(reserva, userId);
+            
+            Snackbar.Add("Reserva creada con éxito", Severity.Success);
+            Volver();
         }
         catch (Exception ex)
         {

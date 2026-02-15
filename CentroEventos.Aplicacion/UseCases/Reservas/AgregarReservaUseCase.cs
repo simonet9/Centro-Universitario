@@ -12,16 +12,16 @@ namespace CentroEventos.Aplicacion.UseCases.Reservas
         ValidadorReserva validador
         ) : UseCaseConAutorizacion(servicioAutorizacion)
     {
-        public void Ejecutar(Reserva datosReserva, Guid idUsuario)
+        public async Task EjecutarAsync(Reserva datosReserva, Guid idUsuario)
         {
-            ValidarAutorizacion(idUsuario,Permiso.EventoAlta);
+            await ValidarAutorizacionAsync(idUsuario,Permiso.EventoAlta);
             validador.Validar(datosReserva);
-            if (repoReserva.BuscarPorId(datosReserva.Id) != null)
+            if (await repoReserva.BuscarPorIdAsync(datosReserva.Id) != null)
                 throw new OperacionInvalidaException("Ya existe una reserva con el mismo ID.");
-            if (repoReserva.BuscarPersonaPorReserva(datosReserva.PersonaId))
+            if (await repoReserva.BuscarPersonaPorReservaAsync(datosReserva.PersonaId))
                 throw new DuplicadoException("Ya existe una reserva asociada a esta persona.");
-            repoReserva.Agregar(datosReserva);
-            repoReserva.GuardarCambios();
+            await repoReserva.AgregarAsync(datosReserva);
+            await repoReserva.GuardarCambiosAsync();
         }
     }
 }

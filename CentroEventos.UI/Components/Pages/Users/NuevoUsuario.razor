@@ -2,8 +2,10 @@
 @using CentroEventos.Aplicacion.Enum
 @using CentroEventos.Aplicacion.Service
 @using CentroEventos.Aplicacion.UseCases.Users
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "UsuarioAlta")]
 @inject RegistrarUsuarioUseCase RegistrarUsuarioUseCase
-@inject UsuarioLogueado User
+@inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 
@@ -31,22 +33,20 @@
 
 @code {
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        if (User.ExisteUsuarioLogueado()) return;
-        NavigationManager.NavigateTo("/");
     }
 
     private async Task CrearUsuario((string Nombre, string Apellido, string Email, string Password, List<Permiso> Permisos) datos)
     {
         try
         {
-            await Task.Run(() => RegistrarUsuarioUseCase.Ejecutar(
+            await RegistrarUsuarioUseCase.EjecutarAsync(
                 datos.Nombre,
                 datos.Apellido,
                 datos.Email,
                 datos.Password,
-                datos.Permisos));
+                datos.Permisos);
 
             Snackbar.Add("Usuario creado con éxito", Severity.Success);
             Volver();

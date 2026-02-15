@@ -4,13 +4,13 @@ namespace CentroEventos.Aplicacion.Interfaces
 {
     public interface IRepositorioEventoDeportivo
     {
-        EventoDeportivo? BuscarPorId(Guid id);
-        void Agregar(EventoDeportivo evento);
-        void Modificar(EventoDeportivo evento);
-        void Eliminar(EventoDeportivo evento);
-        List<EventoDeportivo> Listar();
-        void GuardarCambios();
-        bool ExisteEventoConResponsable(Guid responsableId);
-        EventoDeportivo? BuscarPorNombre(string nombre);
+        Task<EventoDeportivo?> BuscarPorIdAsync(Guid id);
+        Task AgregarAsync(EventoDeportivo evento);
+        Task ModificarAsync(EventoDeportivo evento);
+        Task EliminarAsync(EventoDeportivo evento);
+        Task<List<EventoDeportivo>> ListarAsync();
+        Task GuardarCambiosAsync();
+        Task<bool> ExisteEventoConResponsableAsync(Guid responsableId);
+        Task<EventoDeportivo?> BuscarPorNombreAsync(string nombre);
     }
 }

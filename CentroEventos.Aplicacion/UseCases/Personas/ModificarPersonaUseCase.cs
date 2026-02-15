@@ -7,11 +7,11 @@ namespace CentroEventos.Aplicacion.UseCases.Personas
     public class ModificarPersonaUseCase(
         IRepositorioPersona repositorioPersona)
     {
-        public void Ejecutar(Persona persona)
+        public async Task EjecutarAsync(Persona persona)
         {
             ValidadorPersona.Validar(persona);
-            repositorioPersona.Modificar(persona);
-            repositorioPersona.GuardarCambios();
+            await repositorioPersona.ModificarAsync(persona);
+            await repositorioPersona.GuardarCambiosAsync();
         }
     }
 }

@@ -1,4 +1,6 @@
 using CentroEventos.UI.Components;
+using CentroEventos.UI.Auth;
+using Microsoft.AspNetCore.Components.Authorization;
 using CentroEventos.Aplicacion.Interfaces;
 using CentroEventos.Aplicacion.Validators;
 using CentroEventos.Aplicacion.Service;
@@ -43,8 +45,12 @@ builder.Services.AddScoped<IRepositorioEventoDeportivo, RepositorioEventoDeporti
 builder.Services.AddScoped<IRepositorioReserva, RepositorioReserva>();
 
 // Servicios
+// Servicios
 builder.Services.AddScoped<IServicioAutorizacion, ServicioAutorizacion>();
-builder.Services.AddScoped<UsuarioLogueado>();
+
+// Auth
+builder.Services.AddAuthorizationCore();
+builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthenticationStateProvider>();
 
 // Validadores
 builder.Services.AddScoped<ValidadorReserva>();

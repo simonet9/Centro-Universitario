@@ -4,7 +4,7 @@
 @using CentroEventos.UI.Components.Pages.Shared
 @inject Aplicacion.Interfaces.IRepositorioUsuario RepoUsuario
 @inject NavigationManager Navigation
-@inject UsuarioLogueado UsuarioLogueado
+@inject AuthenticationStateProvider AuthStateProvider
 @inject ISnackbar Snackbar
 
 <MudContainer MaxWidth="MaxWidth.Medium" Class="login-container d-flex justify-center align-center" Style="margin-top: 20px">
@@ -44,7 +44,7 @@
 @code {
     private async Task OnLoginExitoso((string Email, string Password) datos)
     {
-        var usuario = RepoUsuario.ObtenerPorEmail(datos.Email);
+        var usuario = await RepoUsuario.ObtenerPorEmailAsync(datos.Email);
 
         if (usuario == null)
         {
@@ -58,9 +58,11 @@
             return;
         }
 
-        UsuarioLogueado.SetUsuario(usuario);
+        var customAuthStateProvider = (CustomAuthenticationStateProvider)AuthStateProvider;
+        customAuthStateProvider.Login(usuario);
+
         Snackbar.Add("Inicio de sesión exitoso", Severity.Success);
-        await Task.Delay(1500);
+        
         Navigation.NavigateTo("/Index");
     }
 

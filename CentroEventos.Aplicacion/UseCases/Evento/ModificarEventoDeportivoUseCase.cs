@@ -8,12 +8,12 @@ namespace CentroEventos.Aplicacion.UseCases.Evento
     public class ModificarEventoDeportivoUseCase(IRepositorioEventoDeportivo repo, IServicioAutorizacion aut)
     : UseCaseConAutorizacion(aut)
     {
-        public void Ejecutar(EventoDeportivo evento, Guid idUsuario)
+        public async Task EjecutarAsync(EventoDeportivo evento, Guid idUsuario)
         {
-            ValidarAutorizacion(idUsuario, Permiso.EventoModificacion);
+            await ValidarAutorizacionAsync(idUsuario, Permiso.EventoModificacion);
             ValidadorEventoDeportivo.Validar(evento);
-            repo.Modificar(evento);
-            repo.GuardarCambios();
+            await repo.ModificarAsync(evento);
+            await repo.GuardarCambiosAsync();
         }
     }
 }

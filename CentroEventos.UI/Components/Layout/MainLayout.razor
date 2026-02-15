@@ -2,7 +2,8 @@
 @using CentroEventos.UI.Components.Pages.Shared
 @inherits LayoutComponentBase
 @inject NavigationManager NavigationManager
-@inject UsuarioLogueado User
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
 
 <MudThemeProvider />
 <MudPopoverProvider />
@@ -68,8 +69,8 @@
 
     void OnCerrarSesionClick()
     {
-        // Lógica para cerrar sesión
-        User.Limpiar();
+        var customAuthStateProvider = (CustomAuthenticationStateProvider)AuthStateProvider;
+        customAuthStateProvider.Logout();
         NavigationManager.NavigateTo("/", true);
     }
 }

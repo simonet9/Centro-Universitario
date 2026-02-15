@@ -4,9 +4,10 @@
 @using CentroEventos.Aplicacion.Interfaces
 @using CentroEventos.Aplicacion.Service
 @using CentroEventos.Aplicacion.UseCases.Users
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
 @inject ListarUsuariosUseCase ListarUsuariosUseCase
-@inject UsuarioLogueado User
-@inject IServicioAutorizacion Service
+@inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
 @inject EliminarUsuarioUseCase Eliminar
 @inject IDialogService DialogService
@@ -96,19 +97,31 @@
 
 @code {
     private List<Usuario> _usuarios = new();
-    private Guid IdUsuario => User.UsuarioActual?.Id ?? Guid.Empty;
-    private bool TienePermisoModificar => Service.PoseeElPermiso(IdUsuario, Permiso.UsuarioModificacion);
-    private bool TienePermisoAgregar => Service.PoseeElPermiso(IdUsuario, Permiso.UsuarioAlta);
-    private bool TienePermisoEliminar => Service.PoseeElPermiso(IdUsuario, Permiso.UsuarioBaja);
-    protected override void OnInitialized()
+    private System.Security.Claims.ClaimsPrincipal? _user;
+    private Guid IdUsuario => Guid.Parse(_user?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? Guid.Empty.ToString());
+    private bool TienePermisoModificar => _user?.IsInRole(Permiso.UsuarioModificacion.ToString()) ?? false;
+    private bool TienePermisoAgregar => _user?.IsInRole(Permiso.UsuarioAlta.ToString()) ?? false;
+    private bool TienePermisoEliminar => _user?.IsInRole(Permiso.UsuarioBaja.ToString()) ?? false;
+
+    protected override async Task OnInitializedAsync()
     {
-        if (!User.ExisteUsuarioLogueado())
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _user = authState.User;
+        await CargarUsuariosAsync();
+    }
+
+    private async Task CargarUsuariosAsync()
+    {
+        try
         {
-            Navigation.NavigateTo("/");
-            return;
+            _usuarios = await ListarUsuariosUseCase.EjecutarAsync();
         }
-        
-        _usuarios = ListarUsuariosUseCase.Ejecutar();
+        catch (Exception ex)
+        {
+            _usuarios = new List<Usuario>();
+            if (!ex.Message.Contains("No hay usuarios"))
+                Snackbar.Add($"Error al cargar los usuarios: {ex.Message}", Severity.Error);
+        }
     }
 
     private void ModificarUsuario(Usuario usuario)
@@ -126,8 +139,8 @@
 
         if (resultado == true)
         {
-            Eliminar.Ejecutar(usuario.Id, IdUsuario);
-            _usuarios = ListarUsuariosUseCase.Ejecutar();
+            await Eliminar.EjecutarAsync(usuario.Id, IdUsuario);
+            await CargarUsuariosAsync();
             Snackbar.Add("Usuario eliminado con éxito", Severity.Success);
         }
     }

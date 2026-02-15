@@ -4,10 +4,12 @@
 @using CentroEventos.Aplicacion.Entities
 @using CentroEventos.Aplicacion.Exceptions
 @using CentroEventos.Aplicacion.Interfaces
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "EventoModificacion")]
+@inject AuthenticationStateProvider AuthStateProvider
 @inject ModificarEventoDeportivoUseCase ModificarEventoUseCase
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
-@inject UsuarioLogueado User
 @inject IRepositorioPersona RepositorioPersona
 @inject IRepositorioEventoDeportivo RepositorioEvento
 
@@ -38,27 +40,21 @@
     private EventoDeportivo? _evento;
     [Parameter]
     public Guid Id { get; set; }
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        if (!User.ExisteUsuarioLogueado())
-    {
-        NavigationManager.NavigateTo("/");
-        return;
-    }
-
-    _evento = RepositorioEvento.BuscarPorId(Id);
-    if (_evento == null)
-    {
-        Snackbar.Add("No se encontró el evento a modificar.", Severity.Error);
-        NavigationManager.NavigateTo("/eventos/listar");
-    }
+        _evento = await RepositorioEvento.BuscarPorIdAsync(Id);
+        if (_evento == null)
+        {
+            Snackbar.Add("No se encontró el evento a modificar.", Severity.Error);
+            NavigationManager.NavigateTo("/eventos/listar");
+        }
     }
     private async Task ModificarEventoHandler((string nombre, string description, DateTime fechaHoraInicio, double durationHoras, int cupoMaximo, string responsableDni) datos)
     {
         try
         {
-            var persona = RepositorioPersona.ObtenerPorDocumento(datos.responsableDni) ?? throw new EntidadNotFoundException("No se encontró la persona responsable del evento.");
-            var evento = RepositorioEvento.BuscarPorId(Id) ?? throw new EntidadNotFoundException("Evento no encontrado.");
+            var persona = await RepositorioPersona.ObtenerPorDocumentoAsync(datos.responsableDni) ?? throw new EntidadNotFoundException("No se encontró la persona responsable del evento.");
+            var evento = await RepositorioEvento.BuscarPorIdAsync(Id) ?? throw new EntidadNotFoundException("Evento no encontrado.");
             evento.Nombre = datos.nombre;
             evento.Description = datos.description;
             evento.FechaHoraInicio = datos.fechaHoraInicio;
@@ -66,13 +62,14 @@
             evento.CupoMaximo = datos.cupoMaximo;
             evento.ResponsableId = persona.Id;
 
-            await Task.Run(() =>
-            {
-                if (User.UsuarioActual != null)
-                    ModificarEventoUseCase.Ejecutar(evento, User.UsuarioActual.Id);
-            });
-                Snackbar.Add("Evento modificado con éxito", Severity.Success);
-                Volver();
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            var userId = Guid.Parse(user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? Guid.Empty.ToString());
+
+            await ModificarEventoUseCase.EjecutarAsync(evento, userId);
+            
+            Snackbar.Add("Evento modificado con éxito", Severity.Success);
+            Volver();
         }
         catch (Exception ex)
         {

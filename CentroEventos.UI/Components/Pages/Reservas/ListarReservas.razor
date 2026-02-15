@@ -4,9 +4,10 @@
 @using CentroEventos.Aplicacion.Interfaces
 @using CentroEventos.Aplicacion.Service
 @using CentroEventos.Aplicacion.UseCases.Reservas
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
 @inject ListarReservasUseCase ListarReservasUseCase
-@inject UsuarioLogueado UsuarioLogueado
-@inject IServicioAutorizacion Service
+@inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
@@ -63,8 +64,8 @@
                     }
                 </HeaderContent>
                 <RowTemplate>
-                    <MudTd DataLabel="Persona">@ObtenerNombrePersona(context.PersonaId)</MudTd>
-                    <MudTd DataLabel="Evento">@ObtenerNombreEvento(context.EventoDeportivoId)</MudTd>
+                    <MudTd DataLabel="Persona">@context.PersonaId</MudTd>
+                    <MudTd DataLabel="Evento">@context.EventoDeportivoId</MudTd>
                     <MudTd DataLabel="Fecha Reserva">@context.FechaAltaReserva.ToString("g")</MudTd>
                     <MudTd DataLabel="Estado">@context.EstadoAsistencia</MudTd>
                     <MudTd>
@@ -111,46 +112,43 @@
 
 @code {
     private List<Reserva> _reservas = new();
-    private Guid IdUsuario => UsuarioLogueado.UsuarioActual?.Id ?? Guid.Empty;
-    private bool TienePermisoAgregar => Service.PoseeElPermiso(IdUsuario, Permiso.ReservaAlta);
-    private bool TienePermisoModificar => Service.PoseeElPermiso(IdUsuario, Permiso.ReservaModificacion);
-    private bool TienePermisoEliminar => Service.PoseeElPermiso(IdUsuario, Permiso.ReservaBaja);
+    private System.Security.Claims.ClaimsPrincipal? _user;
+    private Guid IdUsuario => Guid.Parse(_user?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? Guid.Empty.ToString());
+    private bool TienePermisoAgregar => _user?.IsInRole(Permiso.ReservaAlta.ToString()) ?? false;
+    private bool TienePermisoModificar => _user?.IsInRole(Permiso.ReservaModificacion.ToString()) ?? false;
+    private bool TienePermisoEliminar => _user?.IsInRole(Permiso.ReservaBaja.ToString()) ?? false;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        var usuarioLogueado = UsuarioLogueado.UsuarioActual;
-        if (usuarioLogueado == null)
-        {
-            Navigation.NavigateTo("/login", true);
-            return;
-        }
-
-        CargarReservas();
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _user = authState.User;
+        await CargarReservasAsync();
     }
 
-    private void CargarReservas()
+    private async Task CargarReservasAsync()
     {
         try
         {
-            _reservas = ListarReservasUseCase.Ejecutar();
+            _reservas = await ListarReservasUseCase.EjecutarAsync();
         }
         catch (Exception ex)
         {
             _reservas = new List<Reserva>();
-            Snackbar.Add($"Error al cargar las reservas: {ex.Message}", Severity.Error);
+            if (!ex.Message.Contains("No hay reservas"))
+                Snackbar.Add($"Error al cargar las reservas: {ex.Message}", Severity.Error);
         }
     }
 
-    private string ObtenerNombrePersona(Guid personaId)
+    private async Task<string> ObtenerNombrePersonaAsync(Guid personaId)
     {
-        var persona = RepositorioPersona.BuscarPorId(personaId)!;
-        return $"{persona.Nombre} {persona.Apellido}";
+        var persona = await RepositorioPersona.BuscarPorIdAsync(personaId);
+        return persona != null ? $"{persona.Nombre} {persona.Apellido}" : "Desconocido";
     }
 
-    private string ObtenerNombreEvento(Guid eventoId)
+    private async Task<string> ObtenerNombreEventoAsync(Guid eventoId)
     {
-        var evento = RepositorioEventoDeportivo.BuscarPorId(eventoId)!;
-        return evento.Nombre;
+        var evento = await RepositorioEventoDeportivo.BuscarPorIdAsync(eventoId);
+        return evento != null ? evento.Nombre : "Desconocido";
     }
 
     private void AgregarReserva()
@@ -175,9 +173,9 @@
         {
             try
             {
-                EliminarReservaUseCase.Ejecutar(reserva.Id, IdUsuario);
+                await EliminarReservaUseCase.EjecutarAsync(reserva.Id, IdUsuario);
                 Snackbar.Add("Reserva eliminada con éxito", Severity.Success);
-                CargarReservas();
+                await CargarReservasAsync();
             }
             catch (Exception ex)
             {

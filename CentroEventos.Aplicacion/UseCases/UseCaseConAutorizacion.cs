@@ -6,9 +6,9 @@ namespace CentroEventos.Aplicacion.UseCases;
 
 public abstract class UseCaseConAutorizacion(IServicioAutorizacion servicioAutorizacion)
 {
-    protected void ValidarAutorizacion(Guid idUsuario, Permiso permiso)
+    protected async Task ValidarAutorizacionAsync(Guid idUsuario, Permiso permiso)
     {
-        if (!servicioAutorizacion.PoseeElPermiso(idUsuario, permiso))
+        if (!await servicioAutorizacion.PoseeElPermisoAsync(idUsuario, permiso))
             throw new FalloAutorizacionException();
     }
 }

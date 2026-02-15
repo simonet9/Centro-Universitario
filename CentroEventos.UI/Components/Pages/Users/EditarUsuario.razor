@@ -5,11 +5,13 @@
 @using CentroEventos.Aplicacion.Exceptions
 @using CentroEventos.Aplicacion.Interfaces
 @using CentroEventos.Aplicacion.Enum
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "UsuarioModificacion")]
 @inject ModificarUsuarioUseCase ModificarUsuarioUseCase
 @inject IRepositorioUsuario RepositorioUsuario
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
-@inject UsuarioLogueado UsuarioLogueado
+@inject AuthenticationStateProvider AuthStateProvider
 
 <PageTitle>Editar Usuario</PageTitle>
 
@@ -17,12 +19,7 @@
     <MudPaper Elevation="2" Class="pa-6">
         <MudText Typo="Typo.h5" Class="mb-4">Editar Usuario</MudText>
 
-        @if (!_usuarioEstaLogueado)
-        {
-            <MudAlert Severity="Severity.Error">Debe iniciar sesión para acceder a esta página</MudAlert>
-        }
-        else
-        {
+
             <EditForm Model="@_usuario" OnValidSubmit="GuardarCambios">
                 <DataAnnotationsValidator/>
 
@@ -108,7 +105,7 @@
                     </MudButton>
                 </div>
             </EditForm>
-        }
+
     </MudPaper>
 </MudContainer>
 
@@ -136,29 +133,19 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Verificar si hay un usuario logueado
-        _usuarioEstaLogueado = UsuarioLogueado.ExisteUsuarioLogueado();
-
-        if (!_usuarioEstaLogueado)
-        {
-            return;
-        }
-
         try
         {
             // Obtener el usuario a editar
-            _usuario = RepositorioUsuario.ObtenerPorId(Id) ?? throw new EntidadNotFoundException("Usuario no encontrado");
+            _usuario = await RepositorioUsuario.ObtenerPorIdAsync(Id); 
+            if (_usuario == null) throw new EntidadNotFoundException("Usuario no encontrado");
 
             // Cargar los permisos actuales
             CargarPermisos();
-
-            // Forzar actualización de la UI
-            await InvokeAsync(StateHasChanged);
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Error: {ex.Message}", Severity.Error);
-            NavigationManager.NavigateTo("/usuarios");
+            NavigationManager.NavigateTo("/usuarios/listar");
         }
     }
 
@@ -184,7 +171,7 @@
         Console.WriteLine($"Usuarios: Alta={_permisosUsuarioAlta}, Mod={_permisosUsuarioModif}, Baja={_permisosUsuarioBaja}");
     }
 
-    private void GuardarCambios()
+    private async Task GuardarCambios()
     {
         try
         {
@@ -203,9 +190,12 @@
             Snackbar.Add($"Permisos actualizados: {permisosStr}", Severity.Info);
 
             // Obtener el ID del usuario logueado y ejecutar el caso de uso
-            if (UsuarioLogueado.UsuarioActual == null) return;
-            var usuarioActualId = UsuarioLogueado.UsuarioActual.Id;
-            ModificarUsuarioUseCase.Ejecutar(_usuario, usuarioActualId);
+            // Obtener el ID del usuario logueado y ejecutar el caso de uso
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            var usuarioActualId = Guid.Parse(user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? Guid.Empty.ToString());
+
+            await ModificarUsuarioUseCase.EjecutarAsync(_usuario, usuarioActualId);
             Snackbar.Add("Usuario actualizado correctamente", Severity.Success);
             NavigationManager.NavigateTo("/usuarios/listar");
         }

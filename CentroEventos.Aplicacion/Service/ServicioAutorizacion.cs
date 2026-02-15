@@ -5,12 +5,10 @@ namespace CentroEventos.Aplicacion.Service
 {
     public class ServicioAutorizacion(IRepositorioUsuario repo) : IServicioAutorizacion
     {
-        public bool PoseeElPermiso(Guid idUsuario, Permiso permiso)
+        public async Task<bool> PoseeElPermisoAsync(Guid idUsuario, Permiso permiso)
         {
-            var usuario = repo.ObtenerPorId(idUsuario);
+            var usuario = await repo.ObtenerPorIdAsync(idUsuario);
             return usuario != null && usuario.Permisos.Any(p => p == permiso);
         }
-        
     }
-
 }

@@ -1,18 +1,29 @@
 ﻿using CentroEventos.Aplicacion.Entities;
 using CentroEventos.Aplicacion.Interfaces;
 using CentroEventos.Repositorios.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace CentroEventos.Repositorios.Repos;
 
 public class RepositorioUsuario(MyContext context) : IRepositorioUsuario
 {
-    public Usuario? ObtenerPorEmail(string email) => context.Usuarios.FirstOrDefault(u => u.Email == email);
-    public Usuario? ObtenerPorId(Guid id) => context.Usuarios.FirstOrDefault(u => u.Id == id);
-    public void Agregar(Usuario usuario) => context.Usuarios.Add(usuario);
-    public void Actualizar(Usuario usuario) => context.Usuarios.Update(usuario);
-    public List<Usuario> ObtenerTodos() => context.Usuarios.ToList();
-    public bool ExisteAlguno() => context.Usuarios.Any();
-    public void GuardarCambios() => context.SaveChanges();
-    public void Eliminar(Usuario usuario) =>  context.Usuarios.Remove(usuario);
+    public async Task<Usuario?> ObtenerPorEmailAsync(string email) => await context.Usuarios.FirstOrDefaultAsync(u => u.Email == email);
+    public async Task<Usuario?> ObtenerPorIdAsync(Guid id) => await context.Usuarios.FirstOrDefaultAsync(u => u.Id == id);
+    public async Task AgregarAsync(Usuario usuario) => await context.Usuarios.AddAsync(usuario);
+    
+    public Task ActualizarAsync(Usuario usuario) 
+    {
+        context.Usuarios.Update(usuario);
+        return Task.CompletedTask;
+    }
 
+    public async Task<List<Usuario>> ObtenerTodosAsync() => await context.Usuarios.ToListAsync();
+    public async Task<bool> ExisteAlgunoAsync() => await context.Usuarios.AnyAsync();
+    public async Task GuardarCambiosAsync() => await context.SaveChangesAsync();
+    
+    public Task EliminarAsync(Usuario usuario) 
+    {
+         context.Usuarios.Remove(usuario);
+         return Task.CompletedTask;
+    }
 }

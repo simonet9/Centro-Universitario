@@ -2,9 +2,11 @@
 @using CentroEventos.Aplicacion.Entities
 @using CentroEventos.Aplicacion.Service
 @using CentroEventos.Aplicacion.UseCases.Reservas
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
 @inject ListarAsistenciaAEventoUseCase ListarAsistenciaUseCase
 @inject NavigationManager NavigationManager
-@inject UsuarioLogueado UsuarioLogueado
+@inject AuthenticationStateProvider AuthStateProvider
 @inject ISnackbar Snackbar
 
 <PageTitle>Lista de Asistentes</PageTitle>
@@ -47,26 +49,22 @@
 
     private List<Persona> _asistentes = new();
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        var usuarioLogueado = UsuarioLogueado.UsuarioActual;
-        if (usuarioLogueado == null)
-        {
-            NavigationManager.NavigateTo("/login", true);
-        }
-        CargarAsistentes();
+        await CargarAsistentesAsync();
     }
 
-    private void CargarAsistentes()
+    private async Task CargarAsistentesAsync()
     {
         try
         {
-            _asistentes = ListarAsistenciaUseCase.Ejecutar(EventoId);
+            _asistentes = await ListarAsistenciaUseCase.EjecutarAsync(EventoId);
         }
         catch (Exception ex)
         {
             _asistentes = new List<Persona>();
-            Snackbar.Add($"Error al cargar las personas: {ex.Message}", Severity.Error);
+            if (!ex.Message.Contains("No hay personas"))
+                Snackbar.Add($"Error al cargar las personas: {ex.Message}", Severity.Error);
         }
     }
 

@@ -6,9 +6,9 @@ namespace CentroEventos.Aplicacion.UseCases.Personas
 {
     public class ListarPersonasUseCase(IRepositorioPersona repo)
     {
-        public List<Persona> Ejecutar()
+        public async Task<List<Persona>> EjecutarAsync()
         {
-            var personas = repo.Listar();
+            var personas = await repo.ListarAsync();
             return ValidadorListas.ValidarNoVacia(personas, "No hay personas registradas.");
         }
     }

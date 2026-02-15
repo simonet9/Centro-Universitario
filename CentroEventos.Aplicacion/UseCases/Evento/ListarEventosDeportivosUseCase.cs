@@ -6,9 +6,9 @@ namespace CentroEventos.Aplicacion.UseCases.Evento
 {
     public class ListarEventosDeportivoUseCase(IRepositorioEventoDeportivo repo)
     {
-        public List<EventoDeportivo> Ejecutar()
+        public async Task<List<EventoDeportivo>> EjecutarAsync()
         {
-            var eventos = repo.Listar();
+            var eventos = await repo.ListarAsync();
             return ValidadorListas.ValidarNoVacia(eventos, "No hay eventos deportivos registrados.");
         }
     }

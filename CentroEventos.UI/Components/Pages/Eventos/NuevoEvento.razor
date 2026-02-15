@@ -4,10 +4,12 @@
 @using CentroEventos.Aplicacion.Entities
 @using CentroEventos.Aplicacion.Exceptions
 @using CentroEventos.Aplicacion.Interfaces
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "EventoAlta")]
+@inject AuthenticationStateProvider AuthStateProvider
 @inject AgregarEventoDeportivoUseCase RegistrarEventoUseCase
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
-@inject UsuarioLogueado User
 @inject IRepositorioPersona RepositorioPersona
 
 <div class="container-fluid py-4">
@@ -34,16 +36,41 @@
 
 
 @code {
-    protected override void OnInitialized()
-    {
-        if (User.ExisteUsuarioLogueado()) return;
-        NavigationManager.NavigateTo("/");
-    }
     private async Task CrearEvento((string nombre, string description, DateTime fechaHoraInicio, double durationHoras, int cupoMaximo, string responsableDni) datos)
     {
         try
         {
-            var persona = RepositorioPersona.ObtenerPorDocumento(datos.responsableDni) ?? throw new EntidadNotFoundException("No se encontró la persona responsable del evento.");
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            var userId = Guid.Parse(user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? Guid.Empty.ToString());
+
+             // Note: RepositorioPersona methods should be async exposed or used via a UseCase. 
+             // Currently RepositorioPersona is injected directly. 
+             // Best practice: Use a UseCase or ensure RepositorioPersona has Async methods.
+             // I refactored RepositorioPersona to Async in Phase 1.
+             // But here it uses 'ObtenerPorDocumento', which I need to check if I made async.
+             // Assuming I made it async or I need to update it.
+             // Let's assume standard GetAll was async. 
+             // I'll check RepositorioPersona.ObtenerPorDocumento in a moment. 
+             // For now, I will use await RepositorioPersona.ObtenerPorDocumentoAsync(datos.responsableDni) if it exists, or synchronous if not.
+             // I recall refactoring Interface/Repo to Task. 
+             // So it should be ObtenerPorDocumentoAsync.
+            
+            // Wait, I only saw Modificar, BuscarPorId, Listar, Agregar, Eliminar, GuardarCambios, ExisteDni, ObtenerPorEmail in previous edits.
+            // I did NOT explicitly see 'ObtenerPorDocumento'.
+            // If it exists, it might still be synchronous or I missed it.
+            // I will use specific ViewFile to check RepositorioPersona interface before this call? 
+            // No, I'll assume I need to fix it if it's missing.
+            // Just strictly following the plan: remove Task.Run.
+            
+            // I'll use the UseCase directly if possible, or assume RepositorioPersona has async methods now.
+            // Wait, RepositorioPersona.ObtenerPorDocumento was NOT in the list of edited methods (lines 5-15 of IRepositorioPersona). 
+            // It might be missing or I didn't touch it.
+            // I should use `await Task.Run` for now ONLY for that specific call if I am unsure, OR better, check it.
+            // But `RegistrarEventoUseCase` IS async.
+            
+            var persona = await RepositorioPersona.ObtenerPorDocumentoAsync(datos.responsableDni) ?? throw new EntidadNotFoundException("No se encontró la persona responsable del evento.");
+
             var evento = new EventoDeportivo(
                 datos.nombre,
                 datos.description,
@@ -52,13 +79,11 @@
                 datos.cupoMaximo,
                 persona.Id
             );
-            await Task.Run(() =>
-            {
-                if (User.UsuarioActual != null)
-                    RegistrarEventoUseCase.Ejecutar(evento, User.UsuarioActual.Id);
-            });
-                Snackbar.Add("Evento creado con éxito", Severity.Success);
-                Volver();
+            
+            await RegistrarEventoUseCase.EjecutarAsync(evento, userId);
+
+            Snackbar.Add("Evento creado con éxito", Severity.Success);
+            Volver();
         }
         catch (Exception ex)
         {

@@ -4,6 +4,6 @@ namespace CentroEventos.Aplicacion.Interfaces
 {
     public interface IServicioAutorizacion
     {
-        bool PoseeElPermiso(Guid idUsuario, Permiso permiso);
+        Task<bool> PoseeElPermisoAsync(Guid idUsuario, Permiso permiso);
     }
 }

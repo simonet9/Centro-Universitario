@@ -1,18 +1,18 @@
 using CentroEventos.Aplicacion.Entities;
-    using CentroEventos.Aplicacion.Enum;
-    using CentroEventos.Aplicacion.Interfaces;
-    
-    namespace CentroEventos.Aplicacion.UseCases.Reservas
+using CentroEventos.Aplicacion.Enum;
+using CentroEventos.Aplicacion.Interfaces;
+
+namespace CentroEventos.Aplicacion.UseCases.Reservas
+{
+    public class ModificarReservaUseCase(
+        IRepositorioReserva repoReserva,
+        IServicioAutorizacion aut) : UseCaseConAutorizacion(aut)
     {
-        public class ModificarReservaUseCase(
-            IRepositorioReserva repoReserva,
-            IServicioAutorizacion aut) : UseCaseConAutorizacion(aut)
+        public async Task EjecutarAsync(Reserva reserva, Guid idUsuario)
         {
-            public void Ejecutar(Reserva reserva, Guid idUsuario)
-            {
-                ValidarAutorizacion(idUsuario, Permiso.ReservaModificacion);
-                repoReserva.Modificar(reserva);
-                repoReserva.GuardarCambios();
-            }
+            await ValidarAutorizacionAsync(idUsuario, Permiso.ReservaModificacion);
+            await repoReserva.ModificarAsync(reserva);
+            await repoReserva.GuardarCambiosAsync();
         }
     }
+}

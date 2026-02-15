@@ -7,17 +7,17 @@ namespace CentroEventos.Aplicacion.UseCases.Evento
     public class EliminarEventoDeportivoUseCase(IRepositorioEventoDeportivo repositorioEvento, IServicioAutorizacion aut, IRepositorioReserva repoReserva)
     : UseCaseConAutorizacion(aut)
     {
-        public void Ejecutar(Guid eventoId, Guid usuarioId)
+        public async Task EjecutarAsync(Guid eventoId, Guid usuarioId)
         {
-            ValidarAutorizacion(usuarioId, Permiso.EventoBaja);
-            ValidarReservasExistentes(eventoId);
-            var evento = repositorioEvento.BuscarPorId(eventoId) ?? throw new EntidadNotFoundException("Evento deportivo no encontrado.");
-            repositorioEvento.Eliminar(evento);
-            repositorioEvento.GuardarCambios();
+            await ValidarAutorizacionAsync(usuarioId, Permiso.EventoBaja);
+            await ValidarReservasExistentes(eventoId);
+            var evento = await repositorioEvento.BuscarPorIdAsync(eventoId) ?? throw new EntidadNotFoundException("Evento deportivo no encontrado.");
+            await repositorioEvento.EliminarAsync(evento);
+            await repositorioEvento.GuardarCambiosAsync();
         }
-        private void ValidarReservasExistentes(Guid eventoId)
+        private async Task ValidarReservasExistentes(Guid eventoId)
         {
-            if (repoReserva.ContarPorEvento(eventoId) > 0)
+            if (await repoReserva.ContarPorEventoAsync(eventoId) > 0)
             {
                 throw new OperacionInvalidaException("Existen reservas asociadas a este evento deportivo. No se puede eliminar.");
             }

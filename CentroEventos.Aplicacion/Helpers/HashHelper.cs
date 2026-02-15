@@ -5,20 +5,41 @@ namespace CentroEventos.Aplicacion.Helpers;
 
 public static class HashHelper
 {
+    private const int SaltSize = 16; // 128 bit 
+    private const int KeySize = 32; // 256 bit
+    private const int Iterations = 100000; // NIST recommends at least 10k
+    private static readonly HashAlgorithmName _algorithm = HashAlgorithmName.SHA256;
+
     public static string CalcularHash(string textoPlano)
     {
-        var bytes = Encoding.UTF8.GetBytes(textoPlano);
-        var hashBytes = SHA256.HashData(bytes);
-        var sb = new StringBuilder();
-        foreach (var b in hashBytes)
-            sb.Append(b.ToString("x2")); 
+        byte[] salt = RandomNumberGenerator.GetBytes(SaltSize);
+        byte[] hash = Rfc2898DeriveBytes.Pbkdf2(
+            Encoding.UTF8.GetBytes(textoPlano),
+            salt,
+            Iterations,
+            _algorithm,
+            KeySize
+        );
 
-        return sb.ToString();
+        return $"{Convert.ToHexString(salt)}.{Convert.ToHexString(hash)}";
     }
 
     public static bool VerificarPassword(string password, string hashAlmacenado)
     {
-        var hashIngresado = CalcularHash(password);
-        return hashIngresado == hashAlmacenado;
+        var parts = hashAlmacenado.Split('.');
+        if (parts.Length != 2) return false;
+
+        var salt = Convert.FromHexString(parts[0]);
+        var hash = Convert.FromHexString(parts[1]);
+
+        var hashInput = Rfc2898DeriveBytes.Pbkdf2(
+            Encoding.UTF8.GetBytes(password),
+            salt,
+            Iterations,
+            _algorithm,
+            KeySize
+        );
+
+        return CryptographicOperations.FixedTimeEquals(hash, hashInput);
     }
 }

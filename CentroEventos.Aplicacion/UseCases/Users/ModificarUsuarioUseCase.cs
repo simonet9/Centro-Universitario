@@ -10,11 +10,11 @@ public class ModificarUsuarioUseCase(
     IServicioAutorizacion auth)
     : UseCaseConAutorizacion(auth)
 {
-    public void Ejecutar(Usuario usuario, Guid usuarioModificadorId)
+    public async Task EjecutarAsync(Usuario usuario, Guid usuarioModificadorId)
     {
-        ValidarAutorizacion(usuarioModificadorId, Permiso.UsuarioModificacion);
+        await ValidarAutorizacionAsync(usuarioModificadorId, Permiso.UsuarioModificacion);
         ValidadorUsuario.Validar(usuario.Nombre, usuario.Apellido, usuario.HashPassword, usuario.Email);
-        repoUsuario.Actualizar(usuario);
-        repoUsuario.GuardarCambios();
+        await repoUsuario.ActualizarAsync(usuario);
+        await repoUsuario.GuardarCambiosAsync();
     }
 }

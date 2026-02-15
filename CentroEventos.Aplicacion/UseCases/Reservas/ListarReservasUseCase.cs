@@ -8,9 +8,9 @@ namespace CentroEventos.Aplicacion.UseCases.Reservas
         IRepositorioReserva repoReserva
         )
     {
-        public List<Reserva> Ejecutar()
+        public async Task<List<Reserva>> EjecutarAsync()
         {
-            var reservas = repoReserva.Listar();
+            var reservas = await repoReserva.ListarAsync();
             return ValidadorListas.ValidarNoVacia(reservas, "No hay reservas registradas.");
         }
     }

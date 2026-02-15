@@ -5,13 +5,14 @@
 @using CentroEventos.Aplicacion.UseCases.Evento
 @using CentroEventos.Aplicacion.Service
 
-@inject IServicioAutorizacion Service
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
 @inject EliminarEventoDeportivoUseCase EliminarEventoUseCase
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject ListarEventosDeportivoUseCase Listar
-@inject UsuarioLogueado User
 
 <div class="container-fluid">
     <MudPaper Elevation="3" Class="pa-6 rounded-lg">
@@ -109,10 +110,34 @@
 
     private List<EventoDeportivo>? _eventos = new();
 
-    private Guid IdUsuario => User.UsuarioActual?.Id ?? Guid.Empty;
-    private bool TienePermisoCrear => Service.PoseeElPermiso(IdUsuario, Permiso.EventoAlta);
-    private bool TienePermisoModificar => Service.PoseeElPermiso(IdUsuario, Permiso.EventoModificacion);
-    private bool TienePermisoEliminar => Service.PoseeElPermiso(IdUsuario, Permiso.EventoBaja);
+    private System.Security.Claims.ClaimsPrincipal? _user;
+
+    private bool TienePermisoCrear => _user?.IsInRole(Permiso.EventoAlta.ToString()) ?? false;
+    private bool TienePermisoModificar => _user?.IsInRole(Permiso.EventoModificacion.ToString()) ?? false;
+    private bool TienePermisoEliminar => _user?.IsInRole(Permiso.EventoBaja.ToString()) ?? false;
+    private Guid IdUsuario => Guid.Parse(_user?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? Guid.Empty.ToString());
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _user = authState.User;
+        await CargarEventosAsync();
+    }
+
+    private async Task CargarEventosAsync()
+    {
+        try
+        {
+            _eventos = await Listar.EjecutarAsync();
+        }
+        catch (Exception ex)
+        {
+            _eventos = new List<EventoDeportivo>();
+            // If empty list validation throws, just show empty
+            if (!ex.Message.Contains("No hay eventos"))
+                Snackbar.Add($"Error al cargar los eventos: {ex.Message}", Severity.Error);
+        }
+    }
 
     private void ModificarEvento(EventoDeportivo evento)
     {
@@ -138,8 +163,8 @@
         {
             try
             {
-                EliminarEventoUseCase.Ejecutar(evento.Id, IdUsuario);
-                CargarEventos();
+                await EliminarEventoUseCase.EjecutarAsync(evento.Id, IdUsuario);
+                await CargarEventosAsync();
                 Snackbar.Add("Evento eliminado con éxito", Severity.Success);
             }
             catch (Exception ex)
@@ -149,30 +174,9 @@
         }
     }
 
-    protected override void OnInitialized()
-    {
-        var usuarioLogueado = User.UsuarioActual;
-        if (usuarioLogueado == null)
-        {
-            Navigation.NavigateTo("/login", true);
-            return;
-        }
 
-        CargarEventos();
-    }
 
-    private void CargarEventos()
-    {
-        try
-        {
-            _eventos = Listar.Ejecutar();
-        }
-        catch (Exception ex)
-        {
-            _eventos = new List<EventoDeportivo>();
-            Snackbar.Add($"Error al cargar los eventos: {ex.Message}", Severity.Error);
-        }
-    }
+
 
     private void AgregarEvento()
     {

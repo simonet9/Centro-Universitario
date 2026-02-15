@@ -1,19 +1,36 @@
 ﻿using CentroEventos.Aplicacion.Entities;
 using CentroEventos.Aplicacion.Interfaces;
 using CentroEventos.Repositorios.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace CentroEventos.Repositorios.Repos;
 
 public class RepositorioPersona(MyContext context) : IRepositorioPersona
 {
-    public bool ObtenerPorEmail(string email) => context.Personas.Any(p => p.Email == email);
-    public void Agregar(Persona persona)=>context.Personas.Add(persona);        
-    public Persona? BuscarPorId(Guid id) => context.Personas.FirstOrDefault(p => p.Id == id);
-    public Persona? ObtenerPorDocumento(string documento) => context.Personas.FirstOrDefault(p => p.Dni == documento || p.Email == documento);
-    public void Eliminar(Persona persona)=> context.Personas.Remove(persona);
-    public void GuardarCambios() => context.SaveChanges();
-    public bool ExisteDni(string dni, Guid idIgnorado) => context.Personas.Any(p => p.Dni == dni && p.Id != idIgnorado);
-    public bool ExisteEmail(string email, Guid idIgnorado) => context.Personas.Any(p => p.Email == email && p.Id != idIgnorado);
-    public List<Persona> Listar() => context.Personas.ToList();
-    public void Modificar(Persona persona)=> context.Personas.Update(persona);
+    public async Task<bool> ObtenerPorEmailAsync(string email) => await context.Personas.AnyAsync(p => p.Email == email);
+    public async Task AgregarAsync(Persona persona) => await context.Personas.AddAsync(persona);        
+    public async Task<Persona?> BuscarPorIdAsync(Guid id) => await context.Personas.FirstOrDefaultAsync(p => p.Id == id);
+    public async Task<Persona?> ObtenerPorDocumentoAsync(string documento) => await context.Personas.FirstOrDefaultAsync(p => p.Dni == documento || p.Email == documento);
+    
+    public Task EliminarAsync(Persona persona)
+    {
+        context.Personas.Remove(persona);
+        return Task.CompletedTask;
+    }
+
+    public async Task GuardarCambiosAsync() => await context.SaveChangesAsync();
+    public async Task<bool> ExisteDniAsync(string dni, Guid idIgnorado) => await context.Personas.AnyAsync(p => p.Dni == dni && p.Id != idIgnorado);
+    
+    // Note: The original generic ExisteEmail wasn't in the interface explicitly but implemented. 
+    // The implementation for ObtenerPorEmailAsync handles email check if that's what was intended, 
+    // or if "ExisteEmail" was a public method not in interface. 
+    // The interface has ObtenerPorEmail returning bool, so I implemented that.
+    
+    public async Task<List<Persona>> ListarAsync() => await context.Personas.ToListAsync();
+    
+    public Task ModificarAsync(Persona persona)
+    {
+        context.Personas.Update(persona);
+        return Task.CompletedTask;
+    }
 }

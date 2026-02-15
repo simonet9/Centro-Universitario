@@ -5,19 +5,22 @@ namespace CentroEventos.Aplicacion.UseCases.Personas
 {
     public class EliminarPersonaUseCase(IRepositorioPersona repo, IRepositorioEventoDeportivo repoEvento, IRepositorioReserva repoReserva)
     {
-        public void Ejecutar(Guid idPersona)
+        public async Task EjecutarAsync(Guid idPersona)
         {
-            ValidarAsociaciones(idPersona);
-            var persona  = repo.BuscarPorId(idPersona) ?? throw new EntidadNotFoundException("Persona no encontrada.");
-            repo.Eliminar(persona);
-            repo.GuardarCambios();
+            await ValidarAsociaciones(idPersona);
+            var persona  = await repo.BuscarPorIdAsync(idPersona) ?? throw new EntidadNotFoundException("Persona no encontrada.");
+            await repo.EliminarAsync(persona);
+            await repo.GuardarCambiosAsync();
         }
-        private void ValidarAsociaciones(Guid idPersona)
+        private async Task ValidarAsociaciones(Guid idPersona)
         {
-            if (repoEvento.ExisteEventoConResponsable(idPersona))
+            if (await repoEvento.ExisteEventoConResponsableAsync(idPersona))
                 throw new OperacionInvalidaException("No se puede eliminar la persona porque es responsable de uno o más eventos deportivos.");
 
-            if (repoReserva.ListarPorPersona(idPersona).Count > 0)
+            // Optimization: We could have a "CountPorPersona" or "ExistePorPersona" in RepoReserva, 
+            // but ListarPorPersona is what we have.
+            var reservas = await repoReserva.ListarPorPersonaAsync(idPersona);
+            if (reservas.Count > 0)
                 throw new OperacionInvalidaException("No se puede eliminar la persona porque tiene reservas asociadas.");
         } 
     }

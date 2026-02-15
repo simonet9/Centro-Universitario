@@ -9,21 +9,22 @@ namespace CentroEventos.Aplicacion.UseCases.Users;
 
 public class RegistrarUsuarioUseCase(IRepositorioUsuario repoUsuario)
 {
-    public void Ejecutar(string nombre, string apellido, string email, string password, List<Permiso> datosPermisos)
+    public async Task EjecutarAsync(string nombre, string apellido, string email, string password, List<Permiso> datosPermisos)
     {
         try
         {
             ValidadorUsuario.Validar(nombre, apellido, password, email);
 
-            if (repoUsuario.ObtenerPorEmail(email) != null)
+            if (await repoUsuario.ObtenerPorEmailAsync(email) != null)
             {
                 throw new DuplicadoException("Ya existe un usuario con ese email");
             }
+            
+            // HashHelper is synchronous (CPU bound), that's fine.
             var hashPassword = HashHelper.CalcularHash(password);
-            var usuario = new Usuario(nombre, apellido, email, hashPassword,datosPermisos);
+            var usuario = new Usuario(nombre, apellido, email, hashPassword, datosPermisos);
 
-
-            if (!repoUsuario.ExisteAlguno())
+            if (!await repoUsuario.ExisteAlgunoAsync())
             {
                 foreach (var p in System.Enum.GetValues<Permiso>())
                 {
@@ -31,8 +32,8 @@ public class RegistrarUsuarioUseCase(IRepositorioUsuario repoUsuario)
                 }
             }
 
-            repoUsuario.Agregar(usuario);
-            repoUsuario.GuardarCambios();
+            await repoUsuario.AgregarAsync(usuario);
+            await repoUsuario.GuardarCambiosAsync();
         }
         catch (Exception ex)
         {

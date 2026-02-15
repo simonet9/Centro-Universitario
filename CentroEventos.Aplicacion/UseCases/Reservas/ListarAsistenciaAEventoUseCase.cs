@@ -13,20 +13,20 @@ namespace CentroEventos.Aplicacion.UseCases.Reservas
     {
         // ● Debe corroborarse que el estado de la reserva sea Presente a la hora de listar las
         //personas que asistieron al evento.
-        public List<Persona> Ejecutar(Guid eventoId)
+        public async Task<List<Persona>> EjecutarAsync(Guid eventoId)
         {
-            var evento = ValidarYObtenerEvento(eventoId);
+            var evento = await ValidarYObtenerEventoAsync(eventoId);
             ValidarFechaEvento(evento);
             
-            var reservas = repoReserva.ListarPorEvento(eventoId);
-            var asistentes = ObtenerAsistentesDeReservas(reservas);
+            var reservas = await repoReserva.ListarPorEventoAsync(eventoId);
+            var asistentes = await ObtenerAsistentesDeReservasAsync(reservas);
             
             return ValidadorListas.ValidarNoVacia(asistentes,"No hay personas registradas para este evento.");
         }
 
-        private EventoDeportivo ValidarYObtenerEvento(Guid eventoId)
+        private async Task<EventoDeportivo> ValidarYObtenerEventoAsync(Guid eventoId)
         {
-            return repoEvento.BuscarPorId(eventoId) 
+            return await repoEvento.BuscarPorIdAsync(eventoId) 
                    ?? throw new EntidadNotFoundException("Evento deportivo no encontrado.");
         }
 
@@ -38,12 +38,18 @@ namespace CentroEventos.Aplicacion.UseCases.Reservas
             }
         }
 
-        private List<Persona> ObtenerAsistentesDeReservas(IEnumerable<Reserva> reservas)
+        private async Task<List<Persona>> ObtenerAsistentesDeReservasAsync(IEnumerable<Reserva> reservas)
         {
             var reservaPresente = reservas.Where(r => r.EstadoAsistencia == Estado.Presente);
-            var list = reservaPresente.Select(r => repoPersona.BuscarPorId(r.PersonaId)).OfType<Persona>().ToList();
-
-            return list;
+            var personas = new List<Persona>();
+            
+            // Sequential await to avoid threading issues with DbContext if it were shared (safe bet)
+            foreach(var r in reservaPresente)
+            {
+                var p = await repoPersona.BuscarPorIdAsync(r.PersonaId);
+                if (p != null) personas.Add(p);
+            }
+            return personas;
         }
     }
 }

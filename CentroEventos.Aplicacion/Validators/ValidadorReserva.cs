@@ -9,13 +9,13 @@ namespace CentroEventos.Aplicacion.Validators
         IRepositorioEventoDeportivo repoEvento,
         IRepositorioReserva repoReserva)
     {
-    public void Validar(Reserva reserva)
+    public async Task ValidarAsync(Reserva reserva)
     {
-        if (repoPersona.BuscarPorId(reserva.PersonaId) == null)
+        if (await repoPersona.BuscarPorIdAsync(reserva.PersonaId) == null)
             throw new EntidadNotFoundException("La persona no existe.");
 
-        var evento = repoEvento.BuscarPorId(reserva.EventoDeportivoId) ?? throw new EntidadNotFoundException("El evento no existe.");
-        var cantidadReservas = repoReserva.ContarPorEvento(reserva.EventoDeportivoId);
+        var evento = await repoEvento.BuscarPorIdAsync(reserva.EventoDeportivoId) ?? throw new EntidadNotFoundException("El evento no existe.");
+        var cantidadReservas = await repoReserva.ContarPorEventoAsync(reserva.EventoDeportivoId);
         if (cantidadReservas >= evento.CupoMaximo)
             throw new CupoExcedidoException("No hay cupo disponible para este evento.");
     }

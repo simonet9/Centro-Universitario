@@ -15,7 +15,7 @@ namespace CentroEventos.Aplicacion.UseCases.Reservas
         public async Task EjecutarAsync(Reserva datosReserva, Guid idUsuario)
         {
             await ValidarAutorizacionAsync(idUsuario,Permiso.EventoAlta);
-            validador.Validar(datosReserva);
+            await validador.ValidarAsync(datosReserva);
             if (await repoReserva.BuscarPorIdAsync(datosReserva.Id) != null)
                 throw new OperacionInvalidaException("Ya existe una reserva con el mismo ID.");
             if (await repoReserva.BuscarPersonaPorReservaAsync(datosReserva.PersonaId))

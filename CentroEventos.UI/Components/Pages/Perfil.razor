@@ -1,7 +1,10 @@
 ﻿@page "/Perfil"
 @using CentroEventos.Aplicacion.Entities
 @using CentroEventos.Aplicacion.Service
-@inject UsuarioLogueado UsuarioService
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@inject AuthenticationStateProvider AuthStateProvider
+@inject CentroEventos.Aplicacion.Interfaces.IRepositorioUsuario RepositorioUsuario
 @inject NavigationManager NavigationManager
 
 <MudContainer MaxWidth="MaxWidth.Medium" Class="py-8">
@@ -89,13 +92,23 @@
 </MudContainer>
 
 @code {
-    private Usuario? UsuarioActual => UsuarioService.UsuarioActual;
+    private Usuario? UsuarioActual;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        if (!UsuarioService.ExisteUsuarioLogueado())
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (!user.Identity.IsAuthenticated)
         {
             NavigationManager.NavigateTo("/");
+            return;
+        }
+
+        var userIdString = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (Guid.TryParse(userIdString, out var userId))
+        {
+            UsuarioActual = await RepositorioUsuario.ObtenerPorIdAsync(userId);
         }
     }
 

@@ -1,7 +1,8 @@
 ﻿@page "/Index"
 @using CentroEventos.Aplicacion.Service
 @inject NavigationManager NavigationManager
-@inject UsuarioLogueado UsuarioService
+@inject AuthenticationStateProvider AuthStateProvider
+@using Microsoft.AspNetCore.Components.Authorization
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-2">
     <MudPaper Elevation="3" Class="pa-8 ma-1" Style="border-radius: 16px;">
         <MudGrid Justify="Justify.Center">
@@ -83,9 +84,12 @@
 
 
 @code {
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        if (!UsuarioService.ExisteUsuarioLogueado())
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (!user.Identity.IsAuthenticated)
         {
             NavigationManager.NavigateTo("/");
         }

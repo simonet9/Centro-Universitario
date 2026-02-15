@@ -93,7 +93,7 @@ builder.Services.AddMudServices(config =>
 
 // Repositorios de usuarios
 builder.Services.AddScoped<RegistrarUsuarioUseCase>();
-builder.Services.AddScoped<RegistrarUsuarioUseCase>();
+
 builder.Services.AddScoped<ModificarUsuarioUseCase>();
 builder.Services.AddScoped<ListarUsuariosUseCase>();
 builder.Services.AddScoped<EliminarUsuarioUseCase>();

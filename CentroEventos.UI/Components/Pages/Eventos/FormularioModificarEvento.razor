@@ -81,7 +81,7 @@
     private bool _procesando;
     private readonly FormularioEventoModel _modelo = new();
 
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
         if (Evento is not null)
         {
@@ -90,7 +90,7 @@
             _modelo.FechaInicio = Evento.FechaHoraInicio;
             _modelo.Duracion = Evento.DurationHoras;
             _modelo.MaximoCupos = Evento.CupoMaximo;
-            var persona = RepositorioPersona.BuscarPorId(Evento.ResponsableId);
+            var persona = await RepositorioPersona.BuscarPorIdAsync(Evento.ResponsableId);
             _modelo.DniResponsable = persona?.Dni ?? string.Empty;
         }
     }

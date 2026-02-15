@@ -5,7 +5,9 @@
 @inject ListarEventosConCupoDisponibleUseCase ListarEventosConCupoUseCase
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
-@inject UsuarioLogueado usuarioLogueado
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject AuthenticationStateProvider AuthStateProvider
 
 <div class="container-fluid">
     <MudPaper Elevation="3" Class="pa-6 rounded-lg">
@@ -47,27 +49,22 @@
 @code {
     private List<EventoDeportivo> _eventos = new();
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        var usuario = usuarioLogueado.UsuarioActual;
-        if (usuario == null)
-        {
-            NavigationManager.NavigateTo("/login", true);
-            return;
-        }
-        CargarEventos();
+        await CargarEventosAsync();
     }
 
-    private void CargarEventos()
+    private async Task CargarEventosAsync()
     {
         try
         {
-            _eventos = ListarEventosConCupoUseCase.Ejecutar();
+            _eventos = await ListarEventosConCupoUseCase.EjecutarAsync();
         }
         catch (Exception ex)
         {
             _eventos = new List<EventoDeportivo>();
-            Snackbar.Add($"Error al cargar los eventos: {ex.Message}", Severity.Error);
+            if (!ex.Message.Contains("No hay eventos"))
+                Snackbar.Add($"Error al cargar los eventos: {ex.Message}", Severity.Error);
         }
     }
 
